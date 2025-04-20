@@ -1,18 +1,22 @@
-name: CI Python Vulnerable Build
+name: CI Python Secure Build
 
 on:
-  pull_request_target:
+  pull_request:
     branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Setup Python environment
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
@@ -22,22 +26,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Secret
-        env:
-          SECRET_API_KEY: ${{ secrets.API_KEY }}
-        run: echo "Secret loaded"
-
-      - name: Execute command
+      - name: Check dependencies for vulnerabilities
         run: |
-          echo "Running eval simulation..."
-          eval "$INPUT_COMMAND"
+          pip install safety
+          safety check -r requirements.txt
 
-      - name: Title
+      - name: Run security scan with Bandit
         run: |
-          echo "Titre PR : ${{ github.event.pull_request.title }}"
+          pip install bandit
+          bandit -r .
 
-      - name: Run script
+      - name: Run tests
+        run: |
+          pip install pytest
+          pytest
+
+      - name: Display PR title
+        run: echo "Titre PR : Create vuln.py"
+
+      - name: Run application
         run: python code_vuln.py
-
-      - name: Upload dummy artifact
-        run: echo "Simulation complète"
